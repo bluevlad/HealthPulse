@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="logo">
+        <h1>HealthPulse</h1>
+        <p>이미 등록된 구독자</p>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>안녕하세요, {{ name }}님!</strong><br>
+        <strong>{{ email }}</strong>은(는) 이미 뉴스레터를 구독 중입니다.
+    </div>
+
+    <div class="text-center mb-20">
+        <p>오늘의 뉴스 브리핑을 지금 바로 받아보시겠습니까?</p>
+        <p class="hint">오늘 수집된 {{ article_count }}건의 헬스케어 뉴스가 있습니다.</p>
+    </div>
+
+    <form method="POST" action="/send-now">
+        <input type="hidden" name="email" value="{{ email }}">
+        <button type="submit" class="btn btn-block">지금 바로 받기</button>
+    </form>
+
+    <div style="margin-top: 15px;">
+        <a href="/manage/{{ token }}" class="btn btn-secondary btn-block">구독 설정 변경</a>
+    </div>
+
+    <p class="text-center mt-20">
+        <a href="/">← 홈으로 돌아가기</a>
+    </p>
+</div>
+{% endblock %}

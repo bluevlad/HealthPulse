@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="logo">
+        <h1>HealthPulse</h1>
+        <p>구독 관리</p>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success">
+        <strong>✓ 저장 완료!</strong><br>
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/manage/{{ token }}">
+        <div class="form-group">
+            <label for="email">이메일 주소</label>
+            <input type="email" id="email" value="{{ recipient.email }}" disabled>
+            <p class="hint">이메일 주소는 변경할 수 없습니다.</p>
+        </div>
+
+        <div class="form-group">
+            <label for="name">이름</label>
+            <input type="text" id="name" name="name" value="{{ recipient.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="keywords">관심 분야</label>
+            <input type="text" id="keywords" name="keywords"
+                   value="{{ keywords_list | join(', ') if keywords_list else '' }}"
+                   placeholder="예: AI 진단, FDA, 투자">
+            <p class="hint">쉼표로 구분하여 입력하세요. 비워두면 모든 헬스케어 뉴스를 받습니다.</p>
+        </div>
+
+        <div class="form-group">
+            <label>구독 상태</label>
+            <p>{% if recipient.is_active %}
+                <span style="color: green;">✓ 활성</span>
+            {% else %}
+                <span style="color: red;">✗ 비활성</span>
+            {% endif %}</p>
+        </div>
+
+        <button type="submit" class="btn btn-block">변경사항 저장</button>
+    </form>
+
+    <p class="text-center mt-20">
+        <a href="/unsubscribe/{{ token }}" style="color: #dc3545;">구독 해지하기</a>
+    </p>
+</div>
+{% endblock %}

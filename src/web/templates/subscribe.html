@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="logo">
+        <h1>HealthPulse</h1>
+        <p>뉴스레터 구독 신청</p>
+    </div>
+
+    <form method="POST" action="/subscribe">
+        <div class="form-group">
+            <label for="email">이메일 주소 *</label>
+            <input type="email" id="email" name="email" required placeholder="example@email.com">
+        </div>
+
+        <div class="form-group">
+            <label for="name">이름 *</label>
+            <input type="text" id="name" name="name" required placeholder="홍길동">
+        </div>
+
+        <div class="form-group">
+            <label for="keywords">관심 분야 (선택사항)</label>
+            <input type="text" id="keywords" name="keywords" placeholder="예: AI 진단, FDA, 투자">
+            <p class="hint">쉼표로 구분하여 입력하세요. 비워두면 모든 헬스케어 뉴스를 받습니다.</p>
+        </div>
+
+        <button type="submit" class="btn btn-block">구독 신청</button>
+    </form>
+
+    <p class="text-center mt-20">
+        <a href="/">← 홈으로 돌아가기</a>
+    </p>
+</div>
+{% endblock %}

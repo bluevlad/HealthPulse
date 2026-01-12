@@ -1,0 +1,39 @@
+# HealthPulse - 의존성
+# 디지털 헬스케어 뉴스 모니터링 시스템
+
+# 웹 프레임워크
+fastapi>=0.109.0
+uvicorn>=0.27.0
+python-multipart>=0.0.6
+
+# HTTP 클라이언트
+requests>=2.31.0
+httpx>=0.27.0
+
+# 데이터베이스 (SQLite)
+sqlalchemy>=2.0.25
+
+# AI/ML (로컬 실행)
+ollama>=0.4.7
+
+# 스케줄러
+apscheduler>=3.10.4
+
+# 이메일
+aiosmtplib>=3.0.1
+
+# 템플릿
+jinja2>=3.1.3
+
+# 설정
+python-dotenv>=1.0.0
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+pyyaml>=6.0.1
+
+# 유틸리티
+beautifulsoup4>=4.12.3
+lxml>=5.1.0
+
+numpy>=1.26.0
+scikit-learn>=1.4.0

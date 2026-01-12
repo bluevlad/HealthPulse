@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Tests
+tests/
+pytest_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Build
+*.egg-info/
+dist/
+build/
+
+# Docs
+docs/
+*.md
+!README.md
+
+# Temp files
+*.log
+*.tmp
+stdout.txt
+stderr.txt
+output.txt
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="logo">
+        <h1>HealthPulse</h1>
+    </div>
+
+    {% if success %}
+    <div class="alert alert-success">
+        <strong>✓ 구독 해지 완료</strong><br>
+        {{ message }}
+    </div>
+
+    <div class="text-center">
+        <p class="mb-20">그동안 이용해 주셔서 감사합니다. 언제든 다시 구독하실 수 있습니다.</p>
+        <a href="/subscribe" class="btn btn-secondary">다시 구독하기</a>
+    </div>
+    {% else %}
+    <div class="alert alert-error">
+        <strong>오류</strong><br>
+        {{ message }}
+    </div>
+
+    <div class="text-center">
+        <a href="/" class="btn">홈으로 돌아가기</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2>이메일 인증</h2>
+
+    <div class="alert alert-info">
+        <strong>{{ email }}</strong>로 인증 코드가 발송되었습니다.<br>
+        이메일을 확인하고 6자리 인증 코드를 입력해주세요.
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if message %}
+    <div class="alert alert-success">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/verify" class="form">
+        <input type="hidden" name="email" value="{{ email }}">
+        <input type="hidden" name="name" value="{{ name }}">
+        <input type="hidden" name="keywords" value="{{ keywords }}">
+        <input type="hidden" name="verification_id" value="{{ verification_id }}">
+
+        <div class="form-group">
+            <label for="code">인증 코드 (6자리)</label>
+            <input type="text"
+                   id="code"
+                   name="code"
+                   maxlength="6"
+                   pattern="[0-9]{6}"
+                   placeholder="000000"
+                   class="code-input"
+                   autocomplete="off"
+                   required>
+        </div>
+
+        <p class="hint">
+            인증 코드는 <strong>{{ expiry_minutes }}분</strong> 후 만료됩니다.
+        </p>
+
+        <button type="submit" class="btn btn-block">인증하기</button>
+    </form>
+
+    <hr>
+
+    <p class="text-center">인증 코드를 받지 못하셨나요?</p>
+
+    <form method="POST" action="/resend-code">
+        <input type="hidden" name="email" value="{{ email }}">
+        <input type="hidden" name="name" value="{{ name }}">
+        <input type="hidden" name="keywords" value="{{ keywords }}">
+        <button type="submit" class="btn btn-secondary btn-block">인증 코드 재발송</button>
+    </form>
+
+    <div class="text-center" style="margin-top: 20px;">
+        <a href="/subscribe">처음부터 다시 시작</a>
+    </div>
+</div>
+
+<style>
+.code-input {
+    font-size: 24px;
+    letter-spacing: 8px;
+    text-align: center;
+    font-family: monospace;
+    padding: 15px;
+}
+
+.hint {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin: 15px 0;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 25px 0;
+}
+
+.text-center {
+    text-align: center;
+}
+</style>
+{% endblock %}

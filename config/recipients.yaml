@@ -1,0 +1,72 @@
+# HealthPulse 수신자 그룹 설정
+# 각 그룹별로 수신자와 선호 카테고리를 정의합니다.
+
+# 수신자 그룹 정의
+groups:
+  # 경영진 그룹 - 요약 중심 리포트
+  executives:
+    name: 경영진
+    report_type: summary  # summary: 요약, full: 전체
+    categories:
+      - 규제/정책
+      - 시장/산업
+    recipients: []
+      # - email: ceo@company.com
+      #   name: 홍길동 대표
+
+  # 연구개발팀 - 기술/임상 중심
+  rnd:
+    name: 연구개발팀
+    report_type: full
+    categories:
+      - 기술/R&D
+      - 규제/정책
+    recipients: []
+      # - email: rnd@company.com
+      #   name: 연구개발팀
+
+  # 마케팅팀 - 시장/경쟁사 중심
+  marketing:
+    name: 마케팅팀
+    report_type: full
+    categories:
+      - 시장/산업
+      - 경쟁사
+      - 제품/서비스
+    recipients: []
+      # - email: marketing@company.com
+      #   name: 마케팅팀
+
+  # RA팀 (인허가) - 규제 중심
+  regulatory_affairs:
+    name: RA팀
+    report_type: full
+    categories:
+      - 규제/정책
+    recipients: []
+      # - email: ra@company.com
+      #   name: RA팀
+
+  # 전체 수신 그룹
+  all:
+    name: 전체
+    report_type: full
+    categories: []  # 빈 리스트 = 모든 카테고리
+    recipients: []
+      # - email: all@company.com
+      #   name: 전체 수신자
+
+# 발송 설정
+settings:
+  # 발송 시간 (24시간 형식)
+  send_hour: 8
+  send_minute: 0
+
+  # 발신자 이름
+  sender_name: HealthPulse
+
+  # 이메일 제목 템플릿
+  subject_template: "[HealthPulse] {date} 일일 헬스케어 뉴스 브리핑"
+
+  # 재발송 방지 (같은 날 중복 발송 방지)
+  prevent_duplicate: true

@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  healthpulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpulse-web
+    restart: always
+    ports:
+      - "4030:4030"
+    volumes:
+      # 데이터 영속성
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      # 네이버 API
+      - NAVER_CLIENT_ID=${NAVER_CLIENT_ID}
+      - NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}
+      # Ollama (호스트 머신 연결)
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      # Gmail
+      - GMAIL_ADDRESS=${GMAIL_ADDRESS}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      # 데이터베이스
+      - DATABASE_URL=sqlite:///./data/healthpulse.db
+      # 스케줄러
+      - SCHEDULE_HOUR=${SCHEDULE_HOUR:-7}
+      - SCHEDULE_MINUTE=${SCHEDULE_MINUTE:-0}
+      # 로깅
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4030/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # 스케줄러 서비스 (매일 뉴스 수집 및 발송)
+  healthpulse-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpulse-scheduler
+    restart: always
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - NAVER_CLIENT_ID=${NAVER_CLIENT_ID}
+      - NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - GMAIL_ADDRESS=${GMAIL_ADDRESS}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - DATABASE_URL=sqlite:///./data/healthpulse.db
+      - SCHEDULE_HOUR=${SCHEDULE_HOUR:-7}
+      - SCHEDULE_MINUTE=${SCHEDULE_MINUTE:-0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["python", "-m", "src.main"]
+    depends_on:
+      - healthpulse
+
+volumes:
+  healthpulse-data:

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="logo">
+        <h1>HealthPulse</h1>
+        <p>디지털 헬스케어 뉴스레터</p>
+    </div>
+
+    <div class="features">
+        <div class="feature">
+            <div class="feature-icon">📰</div>
+            <div class="feature-text">
+                <h3>매일 선별된 뉴스</h3>
+                <p>매일 아침 7시, 최신 헬스케어 산업 뉴스를 이메일로 받아보세요.</p>
+            </div>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-text">
+                <h3>AI 기반 요약</h3>
+                <p>각 기사는 AI가 분석하고 요약하여 빠르게 핵심을 파악할 수 있습니다.</p>
+            </div>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-text">
+                <h3>맞춤형 키워드</h3>
+                <p>진단키트, FDA 승인, 디지털헬스, 투자 등 관심 분야를 선택하세요.</p>
+            </div>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-text">
+                <h3>개인정보 보호</h3>
+                <p>언제든 원클릭으로 수신 거부 가능. 이메일은 절대 공유되지 않습니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <a href="/subscribe" class="btn btn-block">뉴스레터 구독하기</a>
+</div>
+{% endblock %}

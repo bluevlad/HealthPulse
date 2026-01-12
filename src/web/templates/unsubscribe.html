@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="logo">
+        <h1>HealthPulse</h1>
+        <p>구독 해지</p>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>구독 해지 요청</strong><br>
+        <strong>{{ email }}</strong> 계정의 HealthPulse 뉴스레터 구독을 해지하시겠습니까?
+    </div>
+
+    <form method="POST" action="/unsubscribe/{{ token }}">
+        <button type="submit" class="btn btn-danger btn-block">네, 구독 해지합니다</button>
+    </form>
+
+    <p class="text-center mt-20">
+        <a href="/">← 아니요, 구독 유지하기</a>
+    </p>
+</div>
+{% endblock %}
