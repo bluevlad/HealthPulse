@@ -32,9 +32,13 @@ class Settings(BaseSettings):
         env="DATABASE_URL"
     )
 
-    # 스케줄러
-    schedule_hour: int = Field(default=8, env="SCHEDULE_HOUR")
-    schedule_minute: int = Field(default=0, env="SCHEDULE_MINUTE")
+    # 스케줄러 - 크롤링 (오전 7시)
+    crawl_hour: int = Field(default=7, env="CRAWL_HOUR")
+    crawl_minute: int = Field(default=0, env="CRAWL_MINUTE")
+
+    # 스케줄러 - 뉴스레터 발송 (오전 8시)
+    send_hour: int = Field(default=8, env="SEND_HOUR")
+    send_minute: int = Field(default=0, env="SEND_MINUTE")
 
     # 로깅
     log_level: str = Field(default="INFO", env="LOG_LEVEL")

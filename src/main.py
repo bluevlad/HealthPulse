@@ -55,38 +55,90 @@ DEFAULT_KEYWORDS = [
 ]
 
 
-def run_daily_job():
+def run_crawl_job():
     """
-    일일 작업 실행
+    크롤링 작업 실행 (오전 7시)
 
     1. 뉴스 수집
     2. 중복 제거 및 AI 분석
-    3. 리포트 생성
-    4. 이메일 발송
     """
     logger.info("=" * 50)
-    logger.info("HealthPulse 일일 작업 시작")
+    logger.info("HealthPulse 크롤링 작업 시작")
     logger.info("=" * 50)
 
     try:
         # 1. 뉴스 수집
-        logger.info("[1/4] 뉴스 수집 시작...")
+        logger.info("[1/2] 뉴스 수집 시작...")
         articles = collect_news()
-        logger.info(f"[1/4] 수집 완료: {len(articles)}건")
+        logger.info(f"[1/2] 수집 완료: {len(articles)}건")
 
         if not articles:
             logger.warning("수집된 뉴스가 없습니다.")
             return
 
         # 2. AI 분석
-        logger.info("[2/4] AI 분석 시작...")
+        logger.info("[2/2] AI 분석 시작...")
         processed_count = process_articles()
-        logger.info(f"[2/4] 분석 완료: {processed_count}건")
+        logger.info(f"[2/2] 분석 완료: {processed_count}건")
+
+        logger.info("=" * 50)
+        logger.info("크롤링 작업 완료")
+        logger.info("=" * 50)
+
+    except Exception as e:
+        logger.exception(f"크롤링 작업 중 오류 발생: {e}")
+
+
+def run_send_job():
+    """
+    뉴스레터 발송 작업 실행 (오전 8시)
+    """
+    logger.info("=" * 50)
+    logger.info("HealthPulse 뉴스레터 발송 시작")
+    logger.info("=" * 50)
+
+    try:
+        # 리포트 생성 및 발송
+        logger.info("리포트 생성 및 발송 시작...")
+        send_count = generate_and_send_reports()
+        logger.info(f"발송 완료: {send_count}건")
+
+        logger.info("=" * 50)
+        logger.info("뉴스레터 발송 완료")
+        logger.info("=" * 50)
+
+    except Exception as e:
+        logger.exception(f"뉴스레터 발송 중 오류 발생: {e}")
+
+
+def run_daily_job():
+    """
+    일일 작업 전체 실행 (크롤링 + 발송)
+    --run-once 옵션으로 실행 시 사용
+    """
+    logger.info("=" * 50)
+    logger.info("HealthPulse 일일 작업 시작 (전체)")
+    logger.info("=" * 50)
+
+    try:
+        # 1. 뉴스 수집
+        logger.info("[1/3] 뉴스 수집 시작...")
+        articles = collect_news()
+        logger.info(f"[1/3] 수집 완료: {len(articles)}건")
+
+        if not articles:
+            logger.warning("수집된 뉴스가 없습니다.")
+            return
+
+        # 2. AI 분석
+        logger.info("[2/3] AI 분석 시작...")
+        processed_count = process_articles()
+        logger.info(f"[2/3] 분석 완료: {processed_count}건")
 
         # 3. 리포트 생성 및 발송
-        logger.info("[3/4] 리포트 생성 및 발송 시작...")
+        logger.info("[3/3] 리포트 생성 및 발송 시작...")
         send_count = generate_and_send_reports()
-        logger.info(f"[3/4] 발송 완료: {send_count}건")
+        logger.info(f"[3/3] 발송 완료: {send_count}건")
 
         logger.info("=" * 50)
         logger.info("일일 작업 완료")
@@ -251,26 +303,40 @@ def generate_and_send_reports() -> int:
 
 
 def run_scheduler():
-    """스케줄러 실행"""
+    """스케줄러 실행 (크롤링 7시, 발송 8시)"""
     logger.info("HealthPulse 스케줄러 시작")
 
     scheduler = BlockingScheduler()
 
-    # 매일 지정 시간에 실행
-    trigger = CronTrigger(
-        hour=settings.schedule_hour,
-        minute=settings.schedule_minute
+    # 크롤링 작업 (오전 7시)
+    crawl_trigger = CronTrigger(
+        hour=settings.crawl_hour,
+        minute=settings.crawl_minute
     )
 
     scheduler.add_job(
-        run_daily_job,
-        trigger=trigger,
-        id="daily_job",
-        name="Daily News Collection and Report",
+        run_crawl_job,
+        trigger=crawl_trigger,
+        id="crawl_job",
+        name="Daily News Crawling and Analysis",
+    )
+
+    # 뉴스레터 발송 작업 (오전 8시)
+    send_trigger = CronTrigger(
+        hour=settings.send_hour,
+        minute=settings.send_minute
+    )
+
+    scheduler.add_job(
+        run_send_job,
+        trigger=send_trigger,
+        id="send_job",
+        name="Daily Newsletter Delivery",
     )
 
     logger.info(
-        f"스케줄 설정: 매일 {settings.schedule_hour:02d}:{settings.schedule_minute:02d}에 실행"
+        f"스케줄 설정: 크롤링 {settings.crawl_hour:02d}:{settings.crawl_minute:02d}, "
+        f"발송 {settings.send_hour:02d}:{settings.send_minute:02d}"
     )
 
     try:
