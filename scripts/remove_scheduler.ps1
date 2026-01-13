@@ -1,7 +1,8 @@
 # HealthPulse Windows Task Scheduler Removal Script
 # Run this script as Administrator
 
-$TaskName = "HealthPulse_DailyNewsletter"
+$CrawlTaskName = "HealthPulse_DailyCrawl"
+$SendTaskName = "HealthPulse_DailyNewsletter"
 
 # Check if running as Administrator
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -12,12 +13,26 @@ if (-not $isAdmin) {
     exit 1
 }
 
-# Check if task exists
-$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+Write-Host "Removing HealthPulse scheduled tasks..." -ForegroundColor Yellow
+Write-Host ""
 
-if ($existingTask) {
-    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-    Write-Host "Task '$TaskName' has been removed successfully." -ForegroundColor Green
+# Remove Crawl Task
+$crawlTask = Get-ScheduledTask -TaskName $CrawlTaskName -ErrorAction SilentlyContinue
+if ($crawlTask) {
+    Unregister-ScheduledTask -TaskName $CrawlTaskName -Confirm:$false
+    Write-Host "  Removed: $CrawlTaskName" -ForegroundColor Green
 } else {
-    Write-Host "Task '$TaskName' does not exist." -ForegroundColor Yellow
+    Write-Host "  Not found: $CrawlTaskName" -ForegroundColor Gray
 }
+
+# Remove Send Task
+$sendTask = Get-ScheduledTask -TaskName $SendTaskName -ErrorAction SilentlyContinue
+if ($sendTask) {
+    Unregister-ScheduledTask -TaskName $SendTaskName -Confirm:$false
+    Write-Host "  Removed: $SendTaskName" -ForegroundColor Green
+} else {
+    Write-Host "  Not found: $SendTaskName" -ForegroundColor Gray
+}
+
+Write-Host ""
+Write-Host "Done." -ForegroundColor Green
