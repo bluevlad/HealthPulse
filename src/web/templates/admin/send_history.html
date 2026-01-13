@@ -1,0 +1,102 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Send History</h1>
+    <p>Email delivery records{% if selected_date %} for {{ selected_date }}{% endif %}</p>
+</div>
+
+<!-- Date Filter -->
+<div class="card" style="padding: 16px 24px;">
+    <form class="date-filter" method="get" action="/admin/send-history">
+        <label for="date"><strong>Filter by Date:</strong></label>
+        <input type="date" id="date" name="date" value="{{ selected_date or '' }}">
+        <button type="submit" class="btn btn-sm">Filter</button>
+        <a href="/admin/send-history" class="btn btn-sm btn-outline">Show All</a>
+        {% if available_dates %}
+        <select onchange="if(this.value) window.location.href='/admin/send-history?date='+this.value" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            <option value="">Quick Select...</option>
+            {% for d in available_dates %}
+            <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </form>
+</div>
+
+<!-- History List -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Delivery Records ({{ total_count }} total)</h3>
+    </div>
+
+    {% if history_items %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Recipient</th>
+                    <th>Email</th>
+                    <th>Subject</th>
+                    <th>Articles</th>
+                    <th>Report Date</th>
+                    <th>Status</th>
+                    <th>Sent At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history_items %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.recipient_name }}</td>
+                    <td>{{ item.recipient_email }}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ item.subject }}">
+                        {{ item.subject }}
+                    </td>
+                    <td>{{ item.article_count }}</td>
+                    <td>{{ item.report_date.strftime('%Y-%m-%d') if item.report_date else '-' }}</td>
+                    <td>
+                        {% if item.is_success %}
+                        <span class="badge badge-success">Success</span>
+                        {% else %}
+                        <span class="badge badge-danger" title="{{ item.error_message or '' }}">Failed</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.sent_at.strftime('%Y-%m-%d %H:%M:%S') if item.sent_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/admin/send-history?page={{ page - 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">&laquo; Prev</a>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="active">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+            <a href="/admin/send-history?page={{ p }}{% if selected_date %}&date={{ selected_date }}{% endif %}">{{ p }}</a>
+            {% elif p == 4 or p == total_pages - 3 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/admin/send-history?page={{ page + 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">&#128231;</div>
+        <p>No send history found{% if selected_date %} for {{ selected_date }}{% endif %}.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

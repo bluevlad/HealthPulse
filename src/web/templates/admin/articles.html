@@ -1,0 +1,113 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Collected Articles</h1>
+    <p>News articles gathered by the crawler{% if selected_date %} on {{ selected_date }}{% endif %}</p>
+</div>
+
+<!-- Date Filter -->
+<div class="card" style="padding: 16px 24px;">
+    <form class="date-filter" method="get" action="/admin/articles">
+        <label for="date"><strong>Filter by Date:</strong></label>
+        <input type="date" id="date" name="date" value="{{ selected_date or '' }}">
+        <button type="submit" class="btn btn-sm">Filter</button>
+        <a href="/admin/articles" class="btn btn-sm btn-outline">Show All</a>
+        {% if available_dates %}
+        <select onchange="if(this.value) window.location.href='/admin/articles?date='+this.value" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            <option value="">Quick Select...</option>
+            {% for d in available_dates %}
+            <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Articles List -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Articles ({{ total_count }} total)</h3>
+    </div>
+
+    {% if articles %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th style="min-width: 300px;">Title</th>
+                    <th>Source</th>
+                    <th>Score</th>
+                    <th>Processed</th>
+                    <th>Collected At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                <tr>
+                    <td>{{ article.id }}</td>
+                    <td>
+                        <a href="{{ article.url }}" target="_blank" class="text-link" title="{{ article.title }}">
+                            {{ article.title[:80] }}{% if article.title|length > 80 %}...{% endif %}
+                        </a>
+                        {% if article.summary %}
+                        <div style="font-size: 0.8rem; color: #888; margin-top: 4px;">
+                            {{ article.summary[:100] }}{% if article.summary|length > 100 %}...{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ article.source or '-' }}</td>
+                    <td>
+                        {% if article.importance_score %}
+                        <span class="badge {% if article.importance_score >= 8 %}badge-success{% elif article.importance_score >= 5 %}badge-info{% else %}badge-warning{% endif %}">
+                            {{ article.importance_score }}
+                        </span>
+                        {% else %}
+                        <span style="color: #aaa;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if article.is_processed %}
+                        <span class="badge badge-success">Yes</span>
+                        {% else %}
+                        <span class="badge badge-warning">No</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ article.collected_at.strftime('%Y-%m-%d %H:%M') if article.collected_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/admin/articles?page={{ page - 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">&laquo; Prev</a>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="active">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+            <a href="/admin/articles?page={{ p }}{% if selected_date %}&date={{ selected_date }}{% endif %}">{{ p }}</a>
+            {% elif p == 4 or p == total_pages - 3 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/admin/articles?page={{ page + 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">&#128240;</div>
+        <p>No articles found{% if selected_date %} for {{ selected_date }}{% endif %}.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

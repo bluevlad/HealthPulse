@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -704,6 +705,226 @@ async def update_subscription(
         })
 
 
+# ==================== Admin Pages ====================
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard(request: Request, date: Optional[str] = None):
+    """Admin dashboard - daily overview"""
+    with get_session() as session:
+        # Parse date parameter or use today
+        if date:
+            try:
+                selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                selected_date = datetime.now().date()
+        else:
+            selected_date = datetime.now().date()
+
+        start_of_day = datetime.combine(selected_date, datetime.min.time())
+        end_of_day = datetime.combine(selected_date, datetime.max.time())
+
+        # Get statistics for the selected date
+        # 1. Total subscribers
+        total_subscribers = session.query(Recipient).filter(Recipient.is_active == True).count()
+
+        # 2. Articles collected on the date
+        articles = session.query(Article).filter(
+            Article.collected_at >= start_of_day,
+            Article.collected_at <= end_of_day
+        ).order_by(Article.importance_score.desc()).all()
+
+        # 3. Send history for the date
+        from src.database.models import SendHistory
+        send_history = session.query(SendHistory).filter(
+            SendHistory.sent_at >= start_of_day,
+            SendHistory.sent_at <= end_of_day
+        ).all()
+
+        # Calculate stats
+        total_sent = len(send_history)
+        successful_sends = sum(1 for h in send_history if h.is_success)
+        failed_sends = total_sent - successful_sends
+
+        # Get recipient details for send history
+        send_details = []
+        for history in send_history:
+            recipient = session.query(Recipient).filter(Recipient.id == history.recipient_id).first()
+            send_details.append({
+                "recipient_name": recipient.name if recipient else "Unknown",
+                "recipient_email": recipient.email if recipient else "Unknown",
+                "subject": history.subject,
+                "article_count": history.article_count,
+                "is_success": history.is_success,
+                "error_message": history.error_message,
+                "sent_at": history.sent_at
+            })
+
+        # Get list of dates with data (for navigation)
+        available_dates = session.query(
+            func.date(Article.collected_at).label('date')
+        ).distinct().order_by(func.date(Article.collected_at).desc()).limit(30).all()
+
+        return templates.TemplateResponse("admin/dashboard.html", {
+            "request": request,
+            "title": "관리자 대시보드 - HealthPulse",
+            "selected_date": selected_date,
+            "total_subscribers": total_subscribers,
+            "articles": articles,
+            "article_count": len(articles),
+            "total_sent": total_sent,
+            "successful_sends": successful_sends,
+            "failed_sends": failed_sends,
+            "send_details": send_details,
+            "available_dates": [d[0] for d in available_dates]
+        })
+
+
+@app.get("/admin/subscribers", response_class=HTMLResponse)
+async def admin_subscribers(request: Request, page: int = 1, status: str = "all"):
+    """Admin page - subscriber list"""
+    with get_session() as session:
+        per_page = 20
+        offset = (page - 1) * per_page
+
+        # Build query based on status filter
+        query = session.query(Recipient)
+        if status == "active":
+            query = query.filter(Recipient.is_active == True)
+        elif status == "inactive":
+            query = query.filter(Recipient.is_active == False)
+
+        total_count = query.count()
+        subscribers = query.order_by(Recipient.created_at.desc()).offset(offset).limit(per_page).all()
+
+        total_pages = (total_count + per_page - 1) // per_page
+
+        # Get subscriber statistics
+        active_count = session.query(Recipient).filter(Recipient.is_active == True).count()
+        inactive_count = session.query(Recipient).filter(Recipient.is_active == False).count()
+
+        return templates.TemplateResponse("admin/subscribers.html", {
+            "request": request,
+            "title": "구독자 관리 - HealthPulse",
+            "subscribers": subscribers,
+            "page": page,
+            "total_pages": total_pages,
+            "total_count": total_count,
+            "active_count": active_count,
+            "inactive_count": inactive_count,
+            "status_filter": status
+        })
+
+
+@app.get("/admin/send-history", response_class=HTMLResponse)
+async def admin_send_history(request: Request, date: Optional[str] = None, page: int = 1):
+    """Admin page - send history"""
+    with get_session() as session:
+        from src.database.models import SendHistory
+
+        per_page = 30
+        offset = (page - 1) * per_page
+
+        # Build query
+        query = session.query(SendHistory)
+
+        if date:
+            try:
+                selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+                start_of_day = datetime.combine(selected_date, datetime.min.time())
+                end_of_day = datetime.combine(selected_date, datetime.max.time())
+                query = query.filter(
+                    SendHistory.sent_at >= start_of_day,
+                    SendHistory.sent_at <= end_of_day
+                )
+            except ValueError:
+                selected_date = None
+        else:
+            selected_date = None
+
+        total_count = query.count()
+        history_items = query.order_by(SendHistory.sent_at.desc()).offset(offset).limit(per_page).all()
+
+        total_pages = (total_count + per_page - 1) // per_page
+
+        # Enrich with recipient info
+        history_details = []
+        for item in history_items:
+            recipient = session.query(Recipient).filter(Recipient.id == item.recipient_id).first()
+            history_details.append({
+                "id": item.id,
+                "recipient_name": recipient.name if recipient else "Unknown",
+                "recipient_email": recipient.email if recipient else "Unknown",
+                "subject": item.subject,
+                "article_count": item.article_count,
+                "report_date": item.report_date,
+                "is_success": item.is_success,
+                "error_message": item.error_message,
+                "sent_at": item.sent_at
+            })
+
+        # Get available dates for filter
+        available_dates = session.query(
+            func.date(SendHistory.sent_at).label('date')
+        ).distinct().order_by(func.date(SendHistory.sent_at).desc()).limit(30).all()
+
+        return templates.TemplateResponse("admin/send_history.html", {
+            "request": request,
+            "title": "발송 이력 - HealthPulse",
+            "history_items": history_details,
+            "page": page,
+            "total_pages": total_pages,
+            "total_count": total_count,
+            "selected_date": selected_date,
+            "available_dates": [d[0] for d in available_dates]
+        })
+
+
+@app.get("/admin/articles", response_class=HTMLResponse)
+async def admin_articles(request: Request, date: Optional[str] = None, page: int = 1):
+    """Admin page - collected articles"""
+    with get_session() as session:
+        per_page = 30
+        offset = (page - 1) * per_page
+
+        # Build query
+        query = session.query(Article)
+
+        if date:
+            try:
+                selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+                start_of_day = datetime.combine(selected_date, datetime.min.time())
+                end_of_day = datetime.combine(selected_date, datetime.max.time())
+                query = query.filter(
+                    Article.collected_at >= start_of_day,
+                    Article.collected_at <= end_of_day
+                )
+            except ValueError:
+                selected_date = None
+        else:
+            selected_date = None
+
+        total_count = query.count()
+        articles = query.order_by(Article.collected_at.desc()).offset(offset).limit(per_page).all()
+
+        total_pages = (total_count + per_page - 1) // per_page
+
+        # Get available dates for filter
+        available_dates = session.query(
+            func.date(Article.collected_at).label('date')
+        ).distinct().order_by(func.date(Article.collected_at).desc()).limit(30).all()
+
+        return templates.TemplateResponse("admin/articles.html", {
+            "request": request,
+            "title": "수집 기사 - HealthPulse",
+            "articles": articles,
+            "page": page,
+            "total_pages": total_pages,
+            "total_count": total_count,
+            "selected_date": selected_date,
+            "available_dates": [d[0] for d in available_dates]
+        })
+
+
 # ==================== API Endpoints ====================
 
 @app.get("/api/subscribers/count")
@@ -712,6 +933,51 @@ async def get_subscriber_count():
     with get_session() as session:
         count = session.query(Recipient).filter(Recipient.is_active == True).count()
         return {"count": count}
+
+
+@app.get("/api/admin/stats")
+async def get_admin_stats(date: Optional[str] = None):
+    """Get admin statistics for a specific date"""
+    with get_session() as session:
+        from src.database.models import SendHistory
+
+        if date:
+            try:
+                selected_date = datetime.strptime(date, "%Y-%m-%d").date()
+            except ValueError:
+                selected_date = datetime.now().date()
+        else:
+            selected_date = datetime.now().date()
+
+        start_of_day = datetime.combine(selected_date, datetime.min.time())
+        end_of_day = datetime.combine(selected_date, datetime.max.time())
+
+        # Statistics
+        article_count = session.query(Article).filter(
+            Article.collected_at >= start_of_day,
+            Article.collected_at <= end_of_day
+        ).count()
+
+        send_count = session.query(SendHistory).filter(
+            SendHistory.sent_at >= start_of_day,
+            SendHistory.sent_at <= end_of_day
+        ).count()
+
+        success_count = session.query(SendHistory).filter(
+            SendHistory.sent_at >= start_of_day,
+            SendHistory.sent_at <= end_of_day,
+            SendHistory.is_success == True
+        ).count()
+
+        subscriber_count = session.query(Recipient).filter(Recipient.is_active == True).count()
+
+        return {
+            "date": selected_date.isoformat(),
+            "article_count": article_count,
+            "send_count": send_count,
+            "success_count": success_count,
+            "subscriber_count": subscriber_count
+        }
 
 
 @app.get("/api/health")

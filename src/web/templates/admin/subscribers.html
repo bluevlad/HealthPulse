@@ -1,0 +1,108 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Subscriber Management</h1>
+    <p>Total: {{ total_count }} subscribers (Active: {{ active_count }}, Inactive: {{ inactive_count }})</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_count }}</div>
+        <div class="stat-label">Total Subscribers</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ active_count }}</div>
+        <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ inactive_count }}</div>
+        <div class="stat-label">Inactive</div>
+    </div>
+</div>
+
+<!-- Filter & List -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Subscriber List</h3>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <a href="/admin/subscribers?status=all" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">All ({{ total_count }})</a>
+        <a href="/admin/subscribers?status=active" class="filter-tab {% if status_filter == 'active' %}active{% endif %}">Active ({{ active_count }})</a>
+        <a href="/admin/subscribers?status=inactive" class="filter-tab {% if status_filter == 'inactive' %}active{% endif %}">Inactive ({{ inactive_count }})</a>
+    </div>
+
+    {% if subscribers %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Keywords</th>
+                    <th>Subscribed At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subscriber in subscribers %}
+                <tr>
+                    <td>{{ subscriber.id }}</td>
+                    <td>{{ subscriber.name }}</td>
+                    <td>{{ subscriber.email }}</td>
+                    <td>
+                        {% if subscriber.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge badge-warning">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if subscriber.keywords %}
+                            {% set kw_list = subscriber.keywords | replace('[', '') | replace(']', '') | replace('"', '') %}
+                            <span style="font-size: 0.85rem; color: #666;">{{ kw_list[:50] }}{% if kw_list|length > 50 %}...{% endif %}</span>
+                        {% else %}
+                            <span style="color: #aaa;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ subscriber.created_at.strftime('%Y-%m-%d %H:%M') if subscriber.created_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/admin/subscribers?page={{ page - 1 }}&status={{ status_filter }}">&laquo; Prev</a>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="active">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+            <a href="/admin/subscribers?page={{ p }}&status={{ status_filter }}">{{ p }}</a>
+            {% elif p == 4 or p == total_pages - 3 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/admin/subscribers?page={{ page + 1 }}&status={{ status_filter }}">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">&#128101;</div>
+        <p>No subscribers found.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

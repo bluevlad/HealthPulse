@@ -1,0 +1,126 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Daily Dashboard</h1>
+    <p>{{ selected_date.strftime('%Y-%m-%d') }} Overview</p>
+</div>
+
+<!-- Date Filter -->
+<div class="card" style="padding: 16px 24px;">
+    <form class="date-filter" method="get" action="/admin">
+        <label for="date"><strong>Select Date:</strong></label>
+        <input type="date" id="date" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+        <button type="submit" class="btn btn-sm">View</button>
+        {% if available_dates %}
+        <select onchange="if(this.value) window.location.href='/admin?date='+this.value" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            <option value="">Quick Select...</option>
+            {% for d in available_dates %}
+            <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_subscribers }}</div>
+        <div class="stat-label">Active Subscribers</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ article_count }}</div>
+        <div class="stat-label">Articles Collected</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ successful_sends }}</div>
+        <div class="stat-label">Emails Sent</div>
+    </div>
+    <div class="stat-card {% if failed_sends > 0 %}danger{% endif %}">
+        <div class="stat-value">{{ failed_sends }}</div>
+        <div class="stat-label">Failed Sends</div>
+    </div>
+</div>
+
+<!-- Send Details -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Send Details ({{ selected_date.strftime('%Y-%m-%d') }})</h3>
+    </div>
+    {% if send_details %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Recipient</th>
+                    <th>Email</th>
+                    <th>Subject</th>
+                    <th>Articles</th>
+                    <th>Status</th>
+                    <th>Sent At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in send_details %}
+                <tr>
+                    <td>{{ item.recipient_name }}</td>
+                    <td>{{ item.recipient_email }}</td>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.article_count }}</td>
+                    <td>
+                        {% if item.is_success %}
+                        <span class="badge badge-success">Success</span>
+                        {% else %}
+                        <span class="badge badge-danger" title="{{ item.error_message or '' }}">Failed</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.sent_at.strftime('%H:%M:%S') if item.sent_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">&#128231;</div>
+        <p>No emails were sent on this date.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Articles Preview -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Collected Articles ({{ article_count }})</h3>
+        <a href="/admin/articles?date={{ selected_date.strftime('%Y-%m-%d') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    {% if articles %}
+    <div>
+        {% for article in articles[:10] %}
+        <div class="article-item">
+            <div class="article-title">
+                <a href="{{ article.url }}" target="_blank">{{ article.title }}</a>
+            </div>
+            <div class="article-meta">
+                <span>Source: {{ article.source or '-' }}</span>
+                <span>Score: {{ article.importance_score or 0 }}</span>
+                <span>Collected: {{ article.collected_at.strftime('%H:%M') if article.collected_at else '-' }}</span>
+            </div>
+        </div>
+        {% endfor %}
+        {% if article_count > 10 %}
+        <p style="text-align: center; padding: 16px; color: #888;">
+            ... and {{ article_count - 10 }} more articles.
+            <a href="/admin/articles?date={{ selected_date.strftime('%Y-%m-%d') }}" class="text-link">View all</a>
+        </p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">&#128240;</div>
+        <p>No articles were collected on this date.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
