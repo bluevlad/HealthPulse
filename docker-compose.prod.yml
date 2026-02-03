@@ -1,0 +1,67 @@
+services:
+  healthpulse-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpulse-web
+    restart: always
+    ports:
+      - "4030:4030"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - NAVER_CLIENT_ID=${NAVER_CLIENT_ID}
+      - NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - GMAIL_ADDRESS=${GMAIL_ADDRESS}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/healthpulse.db}
+      - CRAWL_HOUR=${CRAWL_HOUR:-6}
+      - CRAWL_MINUTE=${CRAWL_MINUTE:-0}
+      - SEND_HOUR=${SEND_HOUR:-6}
+      - SEND_MINUTE=${SEND_MINUTE:-10}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4030/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  healthpulse-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpulse-scheduler
+    restart: always
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - NAVER_CLIENT_ID=${NAVER_CLIENT_ID}
+      - NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - GMAIL_ADDRESS=${GMAIL_ADDRESS}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/healthpulse.db}
+      - CRAWL_HOUR=${CRAWL_HOUR:-6}
+      - CRAWL_MINUTE=${CRAWL_MINUTE:-0}
+      - SEND_HOUR=${SEND_HOUR:-6}
+      - SEND_MINUTE=${SEND_MINUTE:-10}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["python", "-m", "src.main"]
+    depends_on:
+      - healthpulse-web
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
