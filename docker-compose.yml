@@ -25,9 +25,11 @@ services:
       - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
       # 데이터베이스
       - DATABASE_URL=sqlite:///./data/healthpulse.db
-      # 스케줄러
-      - SCHEDULE_HOUR=${SCHEDULE_HOUR:-7}
-      - SCHEDULE_MINUTE=${SCHEDULE_MINUTE:-0}
+      # 스케줄러 (크롤링 6:00, 발송 6:10)
+      - CRAWL_HOUR=${CRAWL_HOUR:-6}
+      - CRAWL_MINUTE=${CRAWL_MINUTE:-0}
+      - SEND_HOUR=${SEND_HOUR:-6}
+      - SEND_MINUTE=${SEND_MINUTE:-10}
       # 로깅
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     extra_hosts:
@@ -57,14 +59,22 @@ services:
       - GMAIL_ADDRESS=${GMAIL_ADDRESS}
       - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
       - DATABASE_URL=sqlite:///./data/healthpulse.db
-      - SCHEDULE_HOUR=${SCHEDULE_HOUR:-7}
-      - SCHEDULE_MINUTE=${SCHEDULE_MINUTE:-0}
+      - CRAWL_HOUR=${CRAWL_HOUR:-6}
+      - CRAWL_MINUTE=${CRAWL_MINUTE:-0}
+      - SEND_HOUR=${SEND_HOUR:-6}
+      - SEND_MINUTE=${SEND_MINUTE:-10}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: ["python", "-m", "src.main"]
     depends_on:
       - healthpulse
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   healthpulse-data:
