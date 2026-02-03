@@ -56,7 +56,9 @@ jobs:
           cd ${{ env.DEPLOY_PATH }}
 
           echo "Stopping existing containers..."
-          docker compose -f docker-compose.prod.yml down || true
+          docker compose -f docker-compose.prod.yml down --remove-orphans || true
+          docker compose down --remove-orphans || true
+          docker rm -f healthpulse-web healthpulse-scheduler 2>/dev/null || true
 
           echo "Building containers..."
           docker compose -f docker-compose.prod.yml build
