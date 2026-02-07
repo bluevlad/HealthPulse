@@ -1,0 +1,36 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  BASE_URL: ${{ vars.BASE_URL || 'http://study.unmong.com:4030' }}
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        run: |
+          cd e2e
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Run tests
+        run: cd e2e && npx playwright test
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
