@@ -2,19 +2,19 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Daily Dashboard</h1>
-    <p>{{ selected_date.strftime('%Y-%m-%d') }} Overview</p>
+    <h1>일일 대시보드</h1>
+    <p>{{ selected_date.strftime('%Y-%m-%d') }} 현황</p>
 </div>
 
 <!-- Date Filter -->
 <div class="card" style="padding: 16px 24px;">
     <form class="date-filter" method="get" action="/admin">
-        <label for="date"><strong>Select Date:</strong></label>
+        <label for="date"><strong>날짜 선택:</strong></label>
         <input type="date" id="date" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
-        <button type="submit" class="btn btn-sm">View</button>
+        <button type="submit" class="btn btn-sm">조회</button>
         {% if available_dates %}
         <select onchange="if(this.value) window.location.href='/admin?date='+this.value" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-            <option value="">Quick Select...</option>
+            <option value="">빠른 선택...</option>
             {% for d in available_dates %}
             <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
             {% endfor %}
@@ -27,38 +27,38 @@
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-value">{{ total_subscribers }}</div>
-        <div class="stat-label">Active Subscribers</div>
+        <div class="stat-label">활성 구독자</div>
     </div>
     <div class="stat-card">
         <div class="stat-value">{{ article_count }}</div>
-        <div class="stat-label">Articles Collected</div>
+        <div class="stat-label">수집 기사</div>
     </div>
     <div class="stat-card success">
         <div class="stat-value">{{ successful_sends }}</div>
-        <div class="stat-label">Emails Sent</div>
+        <div class="stat-label">발송 성공</div>
     </div>
     <div class="stat-card {% if failed_sends > 0 %}danger{% endif %}">
         <div class="stat-value">{{ failed_sends }}</div>
-        <div class="stat-label">Failed Sends</div>
+        <div class="stat-label">발송 실패</div>
     </div>
 </div>
 
 <!-- Send Details -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Send Details ({{ selected_date.strftime('%Y-%m-%d') }})</h3>
+        <h3 class="card-title">발송 상세 ({{ selected_date.strftime('%Y-%m-%d') }})</h3>
     </div>
     {% if send_details %}
     <div class="table-responsive">
         <table>
             <thead>
                 <tr>
-                    <th>Recipient</th>
-                    <th>Email</th>
-                    <th>Subject</th>
-                    <th>Articles</th>
-                    <th>Status</th>
-                    <th>Sent At</th>
+                    <th>수신자</th>
+                    <th>이메일</th>
+                    <th>제목</th>
+                    <th>기사 수</th>
+                    <th>상태</th>
+                    <th>발송 일시</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,9 +70,9 @@
                     <td>{{ item.article_count }}</td>
                     <td>
                         {% if item.is_success %}
-                        <span class="badge badge-success">Success</span>
+                        <span class="badge badge-success">성공</span>
                         {% else %}
-                        <span class="badge badge-danger" title="{{ item.error_message or '' }}">Failed</span>
+                        <span class="badge badge-danger" title="{{ item.error_message or '' }}">실패</span>
                         {% endif %}
                     </td>
                     <td>{{ item.sent_at.strftime('%H:%M:%S') if item.sent_at else '-' }}</td>
@@ -84,7 +84,7 @@
     {% else %}
     <div class="empty-state">
         <div class="icon">&#128231;</div>
-        <p>No emails were sent on this date.</p>
+        <p>이 날짜에 발송된 이메일이 없습니다.</p>
     </div>
     {% endif %}
 </div>
@@ -92,34 +92,34 @@
 <!-- Articles Preview -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Collected Articles ({{ article_count }})</h3>
-        <a href="/admin/articles?date={{ selected_date.strftime('%Y-%m-%d') }}" class="btn btn-sm btn-outline">View All</a>
+        <h3 class="card-title">수집 기사 ({{ article_count }}건)</h3>
+        <a href="/admin/articles?date={{ selected_date.strftime('%Y-%m-%d') }}" class="btn btn-sm btn-outline">전체 보기</a>
     </div>
     {% if articles %}
     <div>
         {% for article in articles[:10] %}
         <div class="article-item">
             <div class="article-title">
-                <a href="{{ article.url }}" target="_blank">{{ article.title }}</a>
+                <a href="{{ article.original_link or article.link }}" target="_blank">{{ article.title }}</a>
             </div>
             <div class="article-meta">
-                <span>Source: {{ article.source or '-' }}</span>
-                <span>Score: {{ article.importance_score or 0 }}</span>
-                <span>Collected: {{ article.collected_at.strftime('%H:%M') if article.collected_at else '-' }}</span>
+                <span>출처: {{ article.source or '-' }}</span>
+                <span>점수: {{ "%.2f"|format(article.importance_score) if article.importance_score else '0' }}</span>
+                <span>수집: {{ article.collected_at.strftime('%H:%M') if article.collected_at else '-' }}</span>
             </div>
         </div>
         {% endfor %}
         {% if article_count > 10 %}
         <p style="text-align: center; padding: 16px; color: #888;">
-            ... and {{ article_count - 10 }} more articles.
-            <a href="/admin/articles?date={{ selected_date.strftime('%Y-%m-%d') }}" class="text-link">View all</a>
+            ... 외 {{ article_count - 10 }}건
+            <a href="/admin/articles?date={{ selected_date.strftime('%Y-%m-%d') }}" class="text-link">전체 보기</a>
         </p>
         {% endif %}
     </div>
     {% else %}
     <div class="empty-state">
         <div class="icon">&#128240;</div>
-        <p>No articles were collected on this date.</p>
+        <p>이 날짜에 수집된 기사가 없습니다.</p>
     </div>
     {% endif %}
 </div>

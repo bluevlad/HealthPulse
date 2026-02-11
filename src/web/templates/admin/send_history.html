@@ -2,20 +2,20 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Send History</h1>
-    <p>Email delivery records{% if selected_date %} for {{ selected_date }}{% endif %}</p>
+    <h1>발송 이력</h1>
+    <p>이메일 발송 기록{% if selected_date %} ({{ selected_date }}){% endif %}</p>
 </div>
 
 <!-- Date Filter -->
 <div class="card" style="padding: 16px 24px;">
     <form class="date-filter" method="get" action="/admin/send-history">
-        <label for="date"><strong>Filter by Date:</strong></label>
+        <label for="date"><strong>날짜 필터:</strong></label>
         <input type="date" id="date" name="date" value="{{ selected_date or '' }}">
-        <button type="submit" class="btn btn-sm">Filter</button>
-        <a href="/admin/send-history" class="btn btn-sm btn-outline">Show All</a>
+        <button type="submit" class="btn btn-sm">조회</button>
+        <a href="/admin/send-history" class="btn btn-sm btn-outline">전체 보기</a>
         {% if available_dates %}
         <select onchange="if(this.value) window.location.href='/admin/send-history?date='+this.value" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-            <option value="">Quick Select...</option>
+            <option value="">빠른 선택...</option>
             {% for d in available_dates %}
             <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
             {% endfor %}
@@ -27,7 +27,7 @@
 <!-- History List -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Delivery Records ({{ total_count }} total)</h3>
+        <h3 class="card-title">발송 기록 (총 {{ total_count }}건)</h3>
     </div>
 
     {% if history_items %}
@@ -36,13 +36,13 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Recipient</th>
-                    <th>Email</th>
-                    <th>Subject</th>
-                    <th>Articles</th>
-                    <th>Report Date</th>
-                    <th>Status</th>
-                    <th>Sent At</th>
+                    <th>수신자</th>
+                    <th>이메일</th>
+                    <th>제목</th>
+                    <th>기사 수</th>
+                    <th>리포트 날짜</th>
+                    <th>상태</th>
+                    <th>발송 일시</th>
                 </tr>
             </thead>
             <tbody>
@@ -58,9 +58,9 @@
                     <td>{{ item.report_date.strftime('%Y-%m-%d') if item.report_date else '-' }}</td>
                     <td>
                         {% if item.is_success %}
-                        <span class="badge badge-success">Success</span>
+                        <span class="badge badge-success">성공</span>
                         {% else %}
-                        <span class="badge badge-danger" title="{{ item.error_message or '' }}">Failed</span>
+                        <span class="badge badge-danger" title="{{ item.error_message or '' }}">실패</span>
                         {% endif %}
                     </td>
                     <td>{{ item.sent_at.strftime('%Y-%m-%d %H:%M:%S') if item.sent_at else '-' }}</td>
@@ -74,7 +74,7 @@
     {% if total_pages > 1 %}
     <div class="pagination">
         {% if page > 1 %}
-        <a href="/admin/send-history?page={{ page - 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">&laquo; Prev</a>
+        <a href="/admin/send-history?page={{ page - 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">&laquo; 이전</a>
         {% endif %}
 
         {% for p in range(1, total_pages + 1) %}
@@ -88,14 +88,14 @@
         {% endfor %}
 
         {% if page < total_pages %}
-        <a href="/admin/send-history?page={{ page + 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">Next &raquo;</a>
+        <a href="/admin/send-history?page={{ page + 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">다음 &raquo;</a>
         {% endif %}
     </div>
     {% endif %}
     {% else %}
     <div class="empty-state">
         <div class="icon">&#128231;</div>
-        <p>No send history found{% if selected_date %} for {{ selected_date }}{% endif %}.</p>
+        <p>{% if selected_date %}{{ selected_date }}의 발송 이력이 없습니다.{% else %}발송 이력이 없습니다.{% endif %}</p>
     </div>
     {% endif %}
 </div>

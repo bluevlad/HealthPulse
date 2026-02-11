@@ -2,20 +2,20 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Collected Articles</h1>
-    <p>News articles gathered by the crawler{% if selected_date %} on {{ selected_date }}{% endif %}</p>
+    <h1>수집 기사</h1>
+    <p>크롤러가 수집한 뉴스 기사{% if selected_date %} ({{ selected_date }}){% endif %}</p>
 </div>
 
 <!-- Date Filter -->
 <div class="card" style="padding: 16px 24px;">
     <form class="date-filter" method="get" action="/admin/articles">
-        <label for="date"><strong>Filter by Date:</strong></label>
+        <label for="date"><strong>날짜 필터:</strong></label>
         <input type="date" id="date" name="date" value="{{ selected_date or '' }}">
-        <button type="submit" class="btn btn-sm">Filter</button>
-        <a href="/admin/articles" class="btn btn-sm btn-outline">Show All</a>
+        <button type="submit" class="btn btn-sm">조회</button>
+        <a href="/admin/articles" class="btn btn-sm btn-outline">전체 보기</a>
         {% if available_dates %}
         <select onchange="if(this.value) window.location.href='/admin/articles?date='+this.value" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-            <option value="">Quick Select...</option>
+            <option value="">빠른 선택...</option>
             {% for d in available_dates %}
             <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
             {% endfor %}
@@ -27,7 +27,7 @@
 <!-- Articles List -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Articles ({{ total_count }} total)</h3>
+        <h3 class="card-title">기사 목록 (총 {{ total_count }}건)</h3>
     </div>
 
     {% if articles %}
@@ -36,11 +36,11 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th style="min-width: 300px;">Title</th>
-                    <th>Source</th>
-                    <th>Score</th>
-                    <th>Processed</th>
-                    <th>Collected At</th>
+                    <th style="min-width: 300px;">제목</th>
+                    <th>출처</th>
+                    <th>점수</th>
+                    <th>처리 여부</th>
+                    <th>수집 일시</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,7 +48,7 @@
                 <tr>
                     <td>{{ article.id }}</td>
                     <td>
-                        <a href="{{ article.url }}" target="_blank" class="text-link" title="{{ article.title }}">
+                        <a href="{{ article.original_link or article.link }}" target="_blank" class="text-link" title="{{ article.title }}">
                             {{ article.title[:80] }}{% if article.title|length > 80 %}...{% endif %}
                         </a>
                         {% if article.summary %}
@@ -61,7 +61,7 @@
                     <td>
                         {% if article.importance_score %}
                         <span class="badge {% if article.importance_score >= 8 %}badge-success{% elif article.importance_score >= 5 %}badge-info{% else %}badge-warning{% endif %}">
-                            {{ article.importance_score }}
+                            {{ "%.2f"|format(article.importance_score) }}
                         </span>
                         {% else %}
                         <span style="color: #aaa;">-</span>
@@ -69,9 +69,9 @@
                     </td>
                     <td>
                         {% if article.is_processed %}
-                        <span class="badge badge-success">Yes</span>
+                        <span class="badge badge-success">완료</span>
                         {% else %}
-                        <span class="badge badge-warning">No</span>
+                        <span class="badge badge-warning">미처리</span>
                         {% endif %}
                     </td>
                     <td>{{ article.collected_at.strftime('%Y-%m-%d %H:%M') if article.collected_at else '-' }}</td>
@@ -85,7 +85,7 @@
     {% if total_pages > 1 %}
     <div class="pagination">
         {% if page > 1 %}
-        <a href="/admin/articles?page={{ page - 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">&laquo; Prev</a>
+        <a href="/admin/articles?page={{ page - 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">&laquo; 이전</a>
         {% endif %}
 
         {% for p in range(1, total_pages + 1) %}
@@ -99,14 +99,14 @@
         {% endfor %}
 
         {% if page < total_pages %}
-        <a href="/admin/articles?page={{ page + 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">Next &raquo;</a>
+        <a href="/admin/articles?page={{ page + 1 }}{% if selected_date %}&date={{ selected_date }}{% endif %}">다음 &raquo;</a>
         {% endif %}
     </div>
     {% endif %}
     {% else %}
     <div class="empty-state">
         <div class="icon">&#128240;</div>
-        <p>No articles found{% if selected_date %} for {{ selected_date }}{% endif %}.</p>
+        <p>{% if selected_date %}{{ selected_date }}에 수집된 기사가 없습니다.{% else %}수집된 기사가 없습니다.{% endif %}</p>
     </div>
     {% endif %}
 </div>

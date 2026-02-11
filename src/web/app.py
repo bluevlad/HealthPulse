@@ -3,6 +3,7 @@ HealthPulse Web Application
 Subscription management and newsletter preview
 """
 
+import re
 import secrets
 import hashlib
 import json
@@ -42,6 +43,7 @@ app = FastAPI(
 # Setup templates and static files
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates.env.globals["now"] = datetime.now
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 # Initialize database
@@ -136,7 +138,7 @@ def send_verification_email(email: str, name: str, code: str) -> bool:
                     <p>본인이 요청하지 않은 경우 이 이메일을 무시해주세요.</p>
                 </div>
                 <div class="footer">
-                    <p>© 2024 HealthPulse. All rights reserved.</p>
+                    <p>© {datetime.now().year} HealthPulse. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -184,6 +186,18 @@ async def subscribe_submit(
     keywords: str = Form(default="")
 ):
     """Handle subscription form submission - send verification code"""
+    # Validate email format
+    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    if not email_pattern.match(email):
+        return templates.TemplateResponse("subscribe.html", {
+            "request": request,
+            "title": "구독 신청 - HealthPulse",
+            "error": "올바른 이메일 형식이 아닙니다. 다시 확인해주세요.",
+            "email": email,
+            "name": name,
+            "keywords": keywords
+        })
+
     with get_session() as session:
         # Check if already subscribed
         existing = session.query(Recipient).filter(Recipient.email == email).first()
@@ -750,8 +764,8 @@ async def admin_dashboard(request: Request, date: Optional[str] = None):
         for history in send_history:
             recipient = session.query(Recipient).filter(Recipient.id == history.recipient_id).first()
             send_details.append({
-                "recipient_name": recipient.name if recipient else "Unknown",
-                "recipient_email": recipient.email if recipient else "Unknown",
+                "recipient_name": recipient.name if recipient else "삭제된 사용자",
+                "recipient_email": recipient.email if recipient else "-",
                 "subject": history.subject,
                 "article_count": history.article_count,
                 "is_success": history.is_success,
@@ -852,8 +866,8 @@ async def admin_send_history(request: Request, date: Optional[str] = None, page:
             recipient = session.query(Recipient).filter(Recipient.id == item.recipient_id).first()
             history_details.append({
                 "id": item.id,
-                "recipient_name": recipient.name if recipient else "Unknown",
-                "recipient_email": recipient.email if recipient else "Unknown",
+                "recipient_name": recipient.name if recipient else "삭제된 사용자",
+                "recipient_email": recipient.email if recipient else "-",
                 "subject": item.subject,
                 "article_count": item.article_count,
                 "report_date": item.report_date,

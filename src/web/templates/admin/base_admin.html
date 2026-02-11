@@ -400,38 +400,38 @@
     <aside class="sidebar">
         <div class="sidebar-logo">
             <h1>HealthPulse</h1>
-            <p>Admin Dashboard</p>
+            <p>관리자 대시보드</p>
         </div>
         <nav>
             <ul class="nav-menu">
                 <li class="nav-item">
                     <a href="/admin" class="nav-link {% if request.url.path == '/admin' %}active{% endif %}">
                         <span class="icon">&#128202;</span>
-                        <span>Dashboard</span>
+                        <span>대시보드</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/admin/subscribers" class="nav-link {% if '/admin/subscribers' in request.url.path %}active{% endif %}">
                         <span class="icon">&#128101;</span>
-                        <span>Subscribers</span>
+                        <span>구독자 관리</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/admin/send-history" class="nav-link {% if '/admin/send-history' in request.url.path %}active{% endif %}">
                         <span class="icon">&#128231;</span>
-                        <span>Send History</span>
+                        <span>발송 이력</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/admin/articles" class="nav-link {% if '/admin/articles' in request.url.path %}active{% endif %}">
                         <span class="icon">&#128240;</span>
-                        <span>Articles</span>
+                        <span>수집 기사</span>
                     </a>
                 </li>
                 <li class="nav-item" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
                     <a href="/" class="nav-link">
                         <span class="icon">&#127968;</span>
-                        <span>Go to Site</span>
+                        <span>사이트로 이동</span>
                     </a>
                 </li>
             </ul>

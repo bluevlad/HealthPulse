@@ -2,37 +2,37 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Subscriber Management</h1>
-    <p>Total: {{ total_count }} subscribers (Active: {{ active_count }}, Inactive: {{ inactive_count }})</p>
+    <h1>구독자 관리</h1>
+    <p>전체: {{ total_count }}명 (활성: {{ active_count }}명, 비활성: {{ inactive_count }}명)</p>
 </div>
 
 <!-- Stats Grid -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-value">{{ total_count }}</div>
-        <div class="stat-label">Total Subscribers</div>
+        <div class="stat-label">전체 구독자</div>
     </div>
     <div class="stat-card success">
         <div class="stat-value">{{ active_count }}</div>
-        <div class="stat-label">Active</div>
+        <div class="stat-label">활성</div>
     </div>
     <div class="stat-card warning">
         <div class="stat-value">{{ inactive_count }}</div>
-        <div class="stat-label">Inactive</div>
+        <div class="stat-label">비활성</div>
     </div>
 </div>
 
 <!-- Filter & List -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Subscriber List</h3>
+        <h3 class="card-title">구독자 목록</h3>
     </div>
 
     <!-- Filter Tabs -->
     <div class="filter-tabs">
-        <a href="/admin/subscribers?status=all" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">All ({{ total_count }})</a>
-        <a href="/admin/subscribers?status=active" class="filter-tab {% if status_filter == 'active' %}active{% endif %}">Active ({{ active_count }})</a>
-        <a href="/admin/subscribers?status=inactive" class="filter-tab {% if status_filter == 'inactive' %}active{% endif %}">Inactive ({{ inactive_count }})</a>
+        <a href="/admin/subscribers?status=all" class="filter-tab {% if status_filter == 'all' %}active{% endif %}">전체 ({{ total_count }})</a>
+        <a href="/admin/subscribers?status=active" class="filter-tab {% if status_filter == 'active' %}active{% endif %}">활성 ({{ active_count }})</a>
+        <a href="/admin/subscribers?status=inactive" class="filter-tab {% if status_filter == 'inactive' %}active{% endif %}">비활성 ({{ inactive_count }})</a>
     </div>
 
     {% if subscribers %}
@@ -41,11 +41,11 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Keywords</th>
-                    <th>Subscribed At</th>
+                    <th>이름</th>
+                    <th>이메일</th>
+                    <th>상태</th>
+                    <th>키워드</th>
+                    <th>구독 일시</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,9 +56,9 @@
                     <td>{{ subscriber.email }}</td>
                     <td>
                         {% if subscriber.is_active %}
-                        <span class="badge badge-success">Active</span>
+                        <span class="badge badge-success">활성</span>
                         {% else %}
-                        <span class="badge badge-warning">Inactive</span>
+                        <span class="badge badge-warning">비활성</span>
                         {% endif %}
                     </td>
                     <td>
@@ -80,7 +80,7 @@
     {% if total_pages > 1 %}
     <div class="pagination">
         {% if page > 1 %}
-        <a href="/admin/subscribers?page={{ page - 1 }}&status={{ status_filter }}">&laquo; Prev</a>
+        <a href="/admin/subscribers?page={{ page - 1 }}&status={{ status_filter }}">&laquo; 이전</a>
         {% endif %}
 
         {% for p in range(1, total_pages + 1) %}
@@ -94,14 +94,14 @@
         {% endfor %}
 
         {% if page < total_pages %}
-        <a href="/admin/subscribers?page={{ page + 1 }}&status={{ status_filter }}">Next &raquo;</a>
+        <a href="/admin/subscribers?page={{ page + 1 }}&status={{ status_filter }}">다음 &raquo;</a>
         {% endif %}
     </div>
     {% endif %}
     {% else %}
     <div class="empty-state">
         <div class="icon">&#128101;</div>
-        <p>No subscribers found.</p>
+        <p>구독자가 없습니다.</p>
     </div>
     {% endif %}
 </div>
