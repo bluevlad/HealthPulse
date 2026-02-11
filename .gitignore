@@ -56,6 +56,11 @@ htmlcov/
 .tox/
 .nox/
 
+# Node.js
+node_modules/
+test-results/
+playwright-report/
+
 # 캐시
 .cache/
 *.cache
