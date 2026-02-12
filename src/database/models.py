@@ -149,6 +149,8 @@ class SendHistory(Base):
     __table_args__ = (
         Index("idx_send_history_date", "report_date"),
         Index("idx_send_history_recipient", "recipient_id"),
+        Index("idx_send_history_sent_at", "sent_at"),
+        Index("idx_send_history_sent_success", "sent_at", "is_success"),
     )
 
     def __repr__(self):
