@@ -44,8 +44,12 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
 # 실행 모드
-python -m src.main              # 스케줄러 모드 (기본)
-python -m src.main --web        # 웹 서버 모드
+python -m src.main              # 스케줄러 모드 (기본, 크롤링 7시/발송 8시)
+python -m src.main --web        # 웹 서버 모드 (uvicorn src.web.app:app)
+python -m src.main --run-once   # 1회 실행 (수집 → 분석 → 발송)
+python -m src.main --collect-only  # 수집만
+python -m src.main --process-only  # AI 분석만
+python -m src.main --send-only     # 발송만
 
 # Docker
 docker compose up -d            # 개발
@@ -53,6 +57,13 @@ docker compose -f docker-compose.prod.yml up -d  # 운영
 
 # 테스트
 pytest tests/
+
+# E2E 테스트 (e2e/)
+cd e2e
+npm install
+npm run test        # Playwright 테스트
+npm run test:ui     # UI 모드
+npm run test:report # 리포트
 ```
 
 Default server port: 4030
@@ -101,8 +112,11 @@ OLLAMA_MODEL=            # 모델명 (기본: qwen2.5:7b)
 GMAIL_ADDRESS=           # Gmail 발송
 GMAIL_APP_PASSWORD=
 DATABASE_URL=            # SQLite (기본: sqlite:///./data/healthpulse.db)
-CRAWL_HOUR=              # 크롤링 시간 (기본: 6)
-SEND_HOUR=               # 발송 시간 (기본: 6)
+CRAWL_HOUR=              # 크롤링 시간 (기본: 7)
+CRAWL_MINUTE=            # 크롤링 분 (기본: 0)
+SEND_HOUR=               # 발송 시간 (기본: 8)
+SEND_MINUTE=             # 발송 분 (기본: 0)
+LOG_LEVEL=               # 로그 레벨 (기본: INFO)
 ```
 
 ## Deployment
