@@ -6,6 +6,7 @@ Subscription management and newsletter preview
 import re
 import secrets
 import hashlib
+import hmac
 import json
 import logging
 import random
@@ -13,14 +14,17 @@ import string
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List
+from urllib.parse import urlparse
 
-from fastapi import FastAPI, Request, Form, HTTPException, Depends
+import bcrypt
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from starlette.middleware.base import BaseHTTPMiddleware
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -32,6 +36,7 @@ from src.reporter import ReportGenerator
 from src.mailer import GmailSender
 
 logger = logging.getLogger(__name__)
+security_logger = logging.getLogger("security")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -39,6 +44,67 @@ app = FastAPI(
     description="디지털 헬스케어 뉴스 구독 서비스",
     version="1.0.0"
 )
+
+class CSRFOriginCheckMiddleware(BaseHTTPMiddleware):
+    """CSRF 방지: POST 요청의 Origin/Referer가 허용된 호스트인지 검증"""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "POST":
+            origin = request.headers.get("origin") or request.headers.get("referer")
+            if origin:
+                parsed = urlparse(origin)
+                allowed_hosts = {
+                    urlparse(settings.web_base_url).hostname,
+                    "localhost",
+                    "127.0.0.1",
+                }
+                if parsed.hostname not in allowed_hosts:
+                    security_logger.warning("CSRF check failed: origin=%s", origin)
+                    raise HTTPException(status_code=403, detail="Forbidden: invalid origin")
+        return await call_next(request)
+
+app.add_middleware(CSRFOriginCheckMiddleware)
+
+
+# ==================== Admin Auth ====================
+
+ADMIN_SESSION_COOKIE = "hp_admin_session"
+ADMIN_SESSION_MAX_AGE = 3600 * 8  # 8 hours
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
+
+
+def _create_admin_session_token() -> str:
+    return secrets.token_hex(32)
+
+
+# In-memory admin session store (single-instance server)
+_admin_sessions: dict[str, datetime] = {}
+
+
+def verify_admin_session(session_token: str) -> bool:
+    """Verify admin session token is valid and not expired"""
+    if not session_token or session_token not in _admin_sessions:
+        return False
+    expires_at = _admin_sessions[session_token]
+    if datetime.now() > expires_at:
+        _admin_sessions.pop(session_token, None)
+        return False
+    return True
+
+
+def require_admin(request: Request) -> None:
+    """Admin 인증 확인 - 미인증 시 로그인 페이지로 리다이렉트용 예외 발생"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if not verify_admin_session(session_token):
+        raise HTTPException(status_code=401, detail="Admin authentication required")
+
 
 # Setup templates and static files
 BASE_DIR = Path(__file__).parent
@@ -186,6 +252,22 @@ async def subscribe_submit(
     keywords: str = Form(default="")
 ):
     """Handle subscription form submission - send verification code"""
+    # Sanitize inputs
+    name = name.strip()[:50]
+    email = email.strip().lower()
+    keywords = keywords.strip()[:200]
+
+    # Validate name
+    if not name or len(name) < 1:
+        return templates.TemplateResponse("subscribe.html", {
+            "request": request,
+            "title": "구독 신청 - HealthPulse",
+            "error": "이름을 입력해주세요.",
+            "email": email,
+            "name": name,
+            "keywords": keywords
+        })
+
     # Validate email format
     email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
     if not email_pattern.match(email):
@@ -719,11 +801,69 @@ async def update_subscription(
         })
 
 
+# ==================== Admin Auth Pages ====================
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+    """Admin 로그인 페이지"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if verify_admin_session(session_token):
+        return RedirectResponse(url="/admin", status_code=303)
+    return templates.TemplateResponse("admin/login.html", {
+        "request": request,
+        "title": "관리자 로그인 - HealthPulse",
+    })
+
+
+@app.post("/admin/login", response_class=HTMLResponse)
+async def admin_login_submit(request: Request, password: str = Form(...)):
+    """Admin 로그인 처리"""
+    if not settings.admin_password:
+        security_logger.error("ADMIN_PASSWORD not configured")
+        raise HTTPException(status_code=500, detail="Admin password not configured")
+
+    if password == settings.admin_password:
+        security_logger.info("Admin login success from %s", request.client.host)
+        token = _create_admin_session_token()
+        _admin_sessions[token] = datetime.now() + timedelta(seconds=ADMIN_SESSION_MAX_AGE)
+        response = RedirectResponse(url="/admin", status_code=303)
+        response.set_cookie(
+            key=ADMIN_SESSION_COOKIE,
+            value=token,
+            max_age=ADMIN_SESSION_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+        )
+        return response
+    else:
+        security_logger.warning("Admin login failed from %s", request.client.host)
+        return templates.TemplateResponse("admin/login.html", {
+            "request": request,
+            "title": "관리자 로그인 - HealthPulse",
+            "error": "비밀번호가 올바르지 않습니다.",
+        })
+
+
+@app.get("/admin/logout")
+async def admin_logout(request: Request):
+    """Admin 로그아웃"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if session_token:
+        _admin_sessions.pop(session_token, None)
+    response = RedirectResponse(url="/admin/login", status_code=303)
+    response.delete_cookie(ADMIN_SESSION_COOKIE)
+    return response
+
+
 # ==================== Admin Pages ====================
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request, date: Optional[str] = None):
     """Admin dashboard - daily overview"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if not verify_admin_session(session_token):
+        return RedirectResponse(url="/admin/login", status_code=303)
+
     with get_session() as session:
         # Parse date parameter or use today
         if date:
@@ -796,6 +936,10 @@ async def admin_dashboard(request: Request, date: Optional[str] = None):
 @app.get("/admin/subscribers", response_class=HTMLResponse)
 async def admin_subscribers(request: Request, page: int = 1, status: str = "all"):
     """Admin page - subscriber list"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if not verify_admin_session(session_token):
+        return RedirectResponse(url="/admin/login", status_code=303)
+
     with get_session() as session:
         per_page = 20
         offset = (page - 1) * per_page
@@ -832,6 +976,10 @@ async def admin_subscribers(request: Request, page: int = 1, status: str = "all"
 @app.get("/admin/send-history", response_class=HTMLResponse)
 async def admin_send_history(request: Request, date: Optional[str] = None, page: int = 1):
     """Admin page - send history"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if not verify_admin_session(session_token):
+        return RedirectResponse(url="/admin/login", status_code=303)
+
     with get_session() as session:
         from src.database.models import SendHistory
 
@@ -896,6 +1044,10 @@ async def admin_send_history(request: Request, date: Optional[str] = None, page:
 @app.get("/admin/articles", response_class=HTMLResponse)
 async def admin_articles(request: Request, date: Optional[str] = None, page: int = 1):
     """Admin page - collected articles"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if not verify_admin_session(session_token):
+        return RedirectResponse(url="/admin/login", status_code=303)
+
     with get_session() as session:
         per_page = 30
         offset = (page - 1) * per_page
@@ -950,8 +1102,12 @@ async def get_subscriber_count():
 
 
 @app.get("/api/admin/stats")
-async def get_admin_stats(date: Optional[str] = None):
+async def get_admin_stats(request: Request, date: Optional[str] = None):
     """Get admin statistics for a specific date"""
+    session_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if not verify_admin_session(session_token):
+        raise HTTPException(status_code=401, detail="Admin authentication required")
+
     with get_session() as session:
         from src.database.models import SendHistory
 
