@@ -75,7 +75,8 @@ class ArticleDeduplicator:
         self.hash_threshold = hash_threshold
         self._model = _get_model()
 
-        # 메모리 캐시 (세션 내 중복 체크용)
+        # 메모리 캐시 (LRU 제한: 최대 10000건)
+        self._max_cache_size = 10000
         self._hash_cache: set[str] = set()
         self._embedding_cache: dict[str, np.ndarray] = {}
 
@@ -193,9 +194,8 @@ class ArticleDeduplicator:
                         matched_hash=matched_hash
                     )
 
-                # 캐시에 추가
-                self._hash_cache.add(new_hash)
-                self._embedding_cache[new_hash] = new_embedding
+                # 캐시에 추가 (LRU eviction)
+                self._add_to_cache(new_hash, new_embedding)
 
                 return DuplicateResult(
                     is_duplicate=False,
@@ -203,8 +203,22 @@ class ArticleDeduplicator:
                 )
 
         # Sentence-BERT 사용 불가 시 해시만으로 판단
-        self._hash_cache.add(new_hash)
+        self._add_to_cache(new_hash)
         return DuplicateResult(is_duplicate=False, similarity_score=0.0)
+
+    def _add_to_cache(self, hash_key: str, embedding: Optional[np.ndarray] = None):
+        """캐시에 항목 추가 (최대 크기 초과 시 가장 오래된 항목 제거)"""
+        if len(self._hash_cache) >= self._max_cache_size:
+            # 가장 오래된 50% 제거
+            evict_count = self._max_cache_size // 2
+            evict_keys = list(self._embedding_cache.keys())[:evict_count]
+            for key in evict_keys:
+                self._hash_cache.discard(key)
+                self._embedding_cache.pop(key, None)
+            logger.info("Cache evicted %d entries (total: %d)", evict_count, len(self._hash_cache))
+        self._hash_cache.add(hash_key)
+        if embedding is not None:
+            self._embedding_cache[hash_key] = embedding
 
     def check_duplicate_simple(
         self,

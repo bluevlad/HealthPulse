@@ -29,10 +29,23 @@ def init_db(database_url: str = "sqlite:///./data/healthpulse.db") -> None:
         db_path = database_url.replace("sqlite:///", "")
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
+    pool_kwargs = {}
+    connect_args = {}
+    if "sqlite" in database_url:
+        connect_args = {"check_same_thread": False}
+    elif "postgresql" in database_url:
+        pool_kwargs = {
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_pre_ping": True,
+            "pool_recycle": 1800,
+        }
+
     _engine = create_engine(
         database_url,
         echo=False,
-        connect_args={"check_same_thread": False} if "sqlite" in database_url else {}
+        connect_args=connect_args,
+        **pool_kwargs,
     )
     _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
