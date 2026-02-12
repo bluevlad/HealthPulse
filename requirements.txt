@@ -10,8 +10,10 @@ python-multipart>=0.0.6
 requests>=2.31.0
 httpx>=0.27.0
 
-# 데이터베이스 (SQLite)
+# 데이터베이스 (SQLite / PostgreSQL)
 sqlalchemy>=2.0.25
+alembic>=1.13.1
+psycopg2-binary>=2.9.9
 
 # AI/ML (로컬 실행)
 ollama>=0.4.7
