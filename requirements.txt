@@ -31,6 +31,9 @@ pydantic>=2.5.3
 pydantic-settings>=2.1.0
 pyyaml>=6.0.1
 
+# 보안
+bcrypt>=4.1.2
+
 # 유틸리티
 beautifulsoup4>=4.12.3
 lxml>=5.1.0

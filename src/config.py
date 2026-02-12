@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     send_hour: int = Field(default=8, env="SEND_HOUR")
     send_minute: int = Field(default=0, env="SEND_MINUTE")
 
+    # Admin 인증
+    admin_password: str = Field(default="", env="ADMIN_PASSWORD")
+    admin_session_secret: str = Field(default="", env="ADMIN_SESSION_SECRET")
+
+    # 웹 기본 URL (CSRF 검증용)
+    web_base_url: str = Field(default="http://localhost:4030", env="WEB_BASE_URL")
+
     # 로깅
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
 
