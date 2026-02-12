@@ -6,6 +6,7 @@ HealthPulse 메인 실행 파일
 
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -148,12 +149,20 @@ def run_daily_job():
         logger.exception(f"일일 작업 중 오류 발생: {e}")
 
 
-def collect_news() -> list:
-    """뉴스 수집"""
+def _search_keyword(keyword: str, display: int = 30):
+    """단일 키워드 검색 (병렬 실행용)"""
     try:
         collector = NaverNewsCollector()
-        deduplicator = ArticleDeduplicator()
+        articles = collector.search(keyword, display=display)
+        return keyword, articles
+    except Exception as e:
+        logger.error(f"  [{keyword}] 검색 실패: {e}")
+        return keyword, []
 
+
+def collect_news() -> list:
+    """뉴스 수집 (키워드 병렬 검색)"""
+    try:
         with get_session() as session:
             # 기존 해시 목록 조회
             existing_hashes = set(ArticleRepository.get_recent_hashes(session, days=7))
@@ -161,20 +170,26 @@ def collect_news() -> list:
             all_articles = []
             new_count = 0
 
-            for keyword in DEFAULT_KEYWORDS:
-                logger.info(f"  키워드 검색: {keyword}")
-                articles = collector.search(keyword, display=30)
+            # 키워드별 병렬 검색 (최대 4개 동시)
+            keyword_results = {}
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {
+                    executor.submit(_search_keyword, kw): kw
+                    for kw in DEFAULT_KEYWORDS
+                }
+                for future in as_completed(futures):
+                    keyword, articles = future.result()
+                    keyword_results[keyword] = articles
+                    logger.info(f"  키워드 검색 완료: {keyword} ({len(articles)}건)")
 
+            # 순서 보장하여 중복 체크 및 저장
+            for keyword in DEFAULT_KEYWORDS:
+                articles = keyword_results.get(keyword, [])
                 for article in articles:
-                    # 중복 체크
                     if article.content_hash in existing_hashes:
                         continue
-
-                    # 링크 중복 체크
                     if ArticleRepository.exists_by_link(session, article.link):
                         continue
-
-                    # 새 기사 저장
                     db_article = ArticleRepository.create(session, article.to_dict())
                     all_articles.append(db_article)
                     existing_hashes.add(article.content_hash)

@@ -22,8 +22,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, case
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import sys
@@ -887,9 +887,11 @@ async def admin_dashboard(request: Request, date: Optional[str] = None):
             Article.collected_at <= end_of_day
         ).order_by(Article.importance_score.desc()).all()
 
-        # 3. Send history for the date
+        # 3. Send history for the date (JOIN으로 Recipient 일괄 로드)
         from src.database.models import SendHistory
-        send_history = session.query(SendHistory).filter(
+        send_history = session.query(SendHistory).options(
+            joinedload(SendHistory.recipient)
+        ).filter(
             SendHistory.sent_at >= start_of_day,
             SendHistory.sent_at <= end_of_day
         ).all()
@@ -899,13 +901,13 @@ async def admin_dashboard(request: Request, date: Optional[str] = None):
         successful_sends = sum(1 for h in send_history if h.is_success)
         failed_sends = total_sent - successful_sends
 
-        # Get recipient details for send history
+        # Get recipient details from eager-loaded relationship
         send_details = []
         for history in send_history:
-            recipient = session.query(Recipient).filter(Recipient.id == history.recipient_id).first()
+            r = history.recipient
             send_details.append({
-                "recipient_name": recipient.name if recipient else "삭제된 사용자",
-                "recipient_email": recipient.email if recipient else "-",
+                "recipient_name": r.name if r else "삭제된 사용자",
+                "recipient_email": r.email if r else "-",
                 "subject": history.subject,
                 "article_count": history.article_count,
                 "is_success": history.is_success,
@@ -1004,18 +1006,20 @@ async def admin_send_history(request: Request, date: Optional[str] = None, page:
             selected_date = None
 
         total_count = query.count()
-        history_items = query.order_by(SendHistory.sent_at.desc()).offset(offset).limit(per_page).all()
+        history_items = query.options(
+            joinedload(SendHistory.recipient)
+        ).order_by(SendHistory.sent_at.desc()).offset(offset).limit(per_page).all()
 
         total_pages = (total_count + per_page - 1) // per_page
 
-        # Enrich with recipient info
+        # Recipient info from eager-loaded relationship
         history_details = []
         for item in history_items:
-            recipient = session.query(Recipient).filter(Recipient.id == item.recipient_id).first()
+            r = item.recipient
             history_details.append({
                 "id": item.id,
-                "recipient_name": recipient.name if recipient else "삭제된 사용자",
-                "recipient_email": recipient.email if recipient else "-",
+                "recipient_name": r.name if r else "삭제된 사용자",
+                "recipient_email": r.email if r else "-",
                 "subject": item.subject,
                 "article_count": item.article_count,
                 "report_date": item.report_date,
@@ -1122,30 +1126,27 @@ async def get_admin_stats(request: Request, date: Optional[str] = None):
         start_of_day = datetime.combine(selected_date, datetime.min.time())
         end_of_day = datetime.combine(selected_date, datetime.max.time())
 
-        # Statistics
+        # Statistics (send_count + success_count를 단일 쿼리로 통합)
         article_count = session.query(Article).filter(
             Article.collected_at >= start_of_day,
             Article.collected_at <= end_of_day
         ).count()
 
-        send_count = session.query(SendHistory).filter(
+        send_stats = session.query(
+            func.count(SendHistory.id).label('total'),
+            func.count(case((SendHistory.is_success == True, 1))).label('success')
+        ).filter(
             SendHistory.sent_at >= start_of_day,
             SendHistory.sent_at <= end_of_day
-        ).count()
-
-        success_count = session.query(SendHistory).filter(
-            SendHistory.sent_at >= start_of_day,
-            SendHistory.sent_at <= end_of_day,
-            SendHistory.is_success == True
-        ).count()
+        ).one()
 
         subscriber_count = session.query(Recipient).filter(Recipient.is_active == True).count()
 
         return {
             "date": selected_date.isoformat(),
             "article_count": article_count,
-            "send_count": send_count,
-            "success_count": success_count,
+            "send_count": send_stats.total,
+            "success_count": send_stats.success,
             "subscriber_count": subscriber_count
         }
 
